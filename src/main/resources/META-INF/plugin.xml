@@ -1,0 +1,26 @@
+<!-- Plugin Configuration File. Read more: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html -->
+<idea-plugin>
+    <id>com.meow.demo</id>
+    <name>Git User Management</name>
+    <vendor>meow</vendor>
+
+    <depends>com.intellij.modules.platform</depends>
+
+    <description><![CDATA[
+        switch global or local git user<br>
+        <em>nah</em>
+    ]]>
+    </description>
+
+    <resource-bundle>messages.MyBundle</resource-bundle>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <toolWindow factoryClass="com.meow.manageGitUser.toolWindow.GitUserToolWindowFactory"
+                    id="MyToolWindow"/>
+    </extensions>
+
+    <applicationListeners>
+        <listener class="com.meow.manageGitUser.listeners.MyApplicationActivationListener" topic="com.intellij.openapi.application.ApplicationActivationListener"/>
+    </applicationListeners>
+
+</idea-plugin>
