@@ -1,45 +1,36 @@
 package com.meow.manageGitUser.services
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.project.Project
-import java.io.BufferedReader
-import java.io.InputStreamReader
+
+import com.meow.manageGitUser.services.GitUserManager.*
 
 @Service(Service.Level.PROJECT)
 class GitUserService(project: Project) {
 
+    private val gitUserManager: GitUserManager
+
     init {
         thisLogger().info("GitUserService initialized for project: ${project.name}")
+        val objectMapper = ObjectMapper()
+        gitUserManager = GitUserManager(objectMapper, project.basePath!!)
     }
 
-    fun getLocalGitUsers(): List<GitUser> {
-        val users = mutableListOf<GitUser>()
-        val process = Runtime.getRuntime().exec("git config --list --local")
-        BufferedReader(InputStreamReader(process.inputStream)).use { reader ->
-            reader.lines().forEach { line ->
-                if (line.startsWith("user.name=")) {
-                    users.add(GitUser().apply {
-                        name = line.substringAfter("=")
-                        email = line.substringAfter("=")
-                    })
-                }
-            }
-        }
-        return users
+    fun getGitUsers(): List<GitUser> {
+        return gitUserManager.getGitUsers()
     }
 
     fun getGlobalGitUser(): GitUser {
-        val process = Runtime.getRuntime().exec("git config --list --global")
-        var gitUser = GitUser()
-        BufferedReader(InputStreamReader(process.inputStream)).use { reader ->
-            reader.lines().forEach { line ->
-                if (line.startsWith("user.name=")) {
-                    gitUser.name = line.substringAfter("=")
-                    gitUser.email = line.substringAfter("=")
-                }
-            }
-        }
-        return gitUser
+        return gitUserManager.getCurGlobalGitUser()!!
+    }
+
+    fun setGitUser(name: String, email: String, env: GitEnv) {
+        gitUserManager.
+    }
+
+    fun addGitUser(name: String, email: String, env: GitEnv) {
+        setGitUser(name, email, env)
     }
 }
