@@ -8,15 +8,16 @@ import java.io.InputStreamReader
 
 class GitUserManager(private val mapper: ObjectMapper, parentPath: String) {
 
-    private object fileNameConstant {
+    private object FileNameConstant {
         const val USER_FILE = "/users.json"
         const val USER_LOCAL_FILE = "/localUsers.json"
     }
+    private val jsonUtil = JsonUtil(mapper)
     private var users: MutableList<GitUser> = mutableListOf()
     private var localGitUserWithPath: MutableMap<String, GitUser> = mutableMapOf()
     private var curGlobalGitUser: GitUser? = null
-    private val usersFile: File = File(parentPath + fileNameConstant.USER_FILE)
-    private val localGitUsersFile: File = File(parentPath + fileNameConstant.USER_LOCAL_FILE)
+    private val usersFile: File = File(parentPath + FileNameConstant.USER_FILE)
+    private val localGitUsersFile: File = File(parentPath + FileNameConstant.USER_LOCAL_FILE)
 
     init {
         init()
@@ -24,7 +25,7 @@ class GitUserManager(private val mapper: ObjectMapper, parentPath: String) {
 
     @Throws(IOException::class, InterruptedException::class)
     private fun init() {
-        curGlobalGitUser = getCurrentGitGitUser(GitEnv.GLOBAL)
+        curGlobalGitUser = getCurrentGitUser(GitEnv.GLOBAL)
         if (!usersFile.exists()) {
             usersFile.createNewFile()
         }
@@ -45,12 +46,10 @@ class GitUserManager(private val mapper: ObjectMapper, parentPath: String) {
 
     private fun loadGitUsers() {
         try {
-            if (usersFile.length() == 0L) {
-                users = mutableListOf()
+            users = jsonUtil.readListUserFromFile(usersFile)
+            if (users.isEmpty()) {
                 saveGitUsers(curGlobalGitUser!!)
-                return
             }
-            users = mapper.readValue(usersFile, mapper.typeFactory.constructCollectionType(MutableList::class.java, GitUser::class.java))
         } catch (e: Exception) {
             throw RuntimeException(e)
         }
@@ -58,21 +57,33 @@ class GitUserManager(private val mapper: ObjectMapper, parentPath: String) {
 
     private fun loadLocalGitUsers() {
         try {
-            if (localGitUsersFile.length() == 0L) {
-                localGitUserWithPath = mutableMapOf()
+            localGitUserWithPath = jsonUtil.readMapStringUserFromFile(localGitUsersFile)
+            if (localGitUserWithPath.isEmpty()) {
                 saveLocalGitUsers(curGlobalGitUser!!, System.getProperty("user.dir"))
-                return
             }
-            localGitUserWithPath = mapper.readValue(localGitUsersFile, mapper.typeFactory.constructMapType(MutableMap::class.java, String::class.java, GitUser::class.java))
         } catch (e: Exception) {
             throw RuntimeException(e)
         }
     }
 
-    fun saveGitUsers(user: GitUser) {
+     fun saveGitUsers(user: GitUser): GitUser {
         try {
             users.add(user)
-            mapper.writeValue(usersFile, users)
+            jsonUtil.writeListToFile(usersFile, users)
+            return user
+        } catch (e: Exception) {
+            throw RuntimeException(e)
+        }
+    }
+
+    fun deleteGitUser(user: GitUser): GitUser {
+        if (user.equals(curGlobalGitUser)) {
+            throw RuntimeException("Cannot delete current global user")
+        }
+        try {
+            users.remove(user)
+            jsonUtil.writeListToFile(usersFile, users)
+            return user
         } catch (e: Exception) {
             throw RuntimeException(e)
         }
@@ -81,7 +92,7 @@ class GitUserManager(private val mapper: ObjectMapper, parentPath: String) {
     fun saveLocalGitUsers(user: GitUser, path: String) {
         try {
             localGitUserWithPath[path] = user
-            mapper.writeValue(localGitUsersFile, localGitUserWithPath)
+            jsonUtil.writeMapToFile(localGitUsersFile, localGitUserWithPath)
         } catch (e: Exception) {
             throw RuntimeException(e)
         }
@@ -89,7 +100,7 @@ class GitUserManager(private val mapper: ObjectMapper, parentPath: String) {
 
     @Throws(IOException::class, InterruptedException::class)
     private fun applyGitUser(user: GitUser, env: GitEnv, dir: File, automaticSave: Boolean, fallbackException: Boolean) {
-        var findGitUser = users.find { it == user }
+        var findGitUser = users.find { user.equals(it) }
         if (findGitUser == null) {
             if (automaticSave) {
                 saveGitUsers(user)
@@ -109,11 +120,11 @@ class GitUserManager(private val mapper: ObjectMapper, parentPath: String) {
             }
         }
 
-        ProcessBuilder("git", "config", env.value, "user.name", user.name)
+        ProcessBuilder("git", "config", "--" + env.value, "user.name", user.name)
             .directory(dir)
             .start()
             .waitFor()
-        ProcessBuilder("git", "config", env.value, "user.email", user.email)
+        ProcessBuilder("git", "config", "--" + env.value, "user.email", user.email)
             .directory(dir)
             .start()
             .waitFor()
@@ -131,6 +142,13 @@ class GitUserManager(private val mapper: ObjectMapper, parentPath: String) {
     }
 
     @Throws(IOException::class, InterruptedException::class)
+    fun applyLocalGitUser(user: GitUser, path: String) {
+        val inPath = System.getProperty(path)
+        applyGitUser(user, GitEnv.LOCAL, File(inPath), true, false)
+        localGitUserWithPath[path] = user
+    }
+
+    @Throws(IOException::class, InterruptedException::class)
     fun applyLocalGitUser(user: GitUser) {
         val path = System.getProperty("user.dir")
         applyGitUser(user, GitEnv.LOCAL, File(path), true, false)
@@ -145,7 +163,7 @@ class GitUserManager(private val mapper: ObjectMapper, parentPath: String) {
     }
 
     @Throws(IOException::class, InterruptedException::class)
-    fun getCurrentGitGitUser(env: GitEnv): GitUser? {
+    fun getCurrentGitUser(env: GitEnv): GitUser? {
         val name = getGitConfigValue("user.name", env)
         val email = getGitConfigValue("user.email", env)
         return if (name != null && email != null) {
@@ -157,7 +175,7 @@ class GitUserManager(private val mapper: ObjectMapper, parentPath: String) {
 
     @Throws(IOException::class, InterruptedException::class)
     private fun getGitConfigValue(key: String, env: GitEnv): String? {
-        val process = ProcessBuilder("git", "config", env.value, key).start()
+        val process = ProcessBuilder("git", "config", "--" + env.value, key).start()
         val reader = BufferedReader(InputStreamReader(process.inputStream))
         val value = reader.readLine()
         process.waitFor()
@@ -173,6 +191,28 @@ class GitUserManager(private val mapper: ObjectMapper, parentPath: String) {
     }
 
     class GitUser(var name: String, var email: String) {
+
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (javaClass != other?.javaClass) return false
+
+            other as GitUser
+
+            if (name != other.name) return false
+            if (email != other.email) return false
+
+            return true
+        }
+
+        override fun hashCode(): Int {
+            var result = name.hashCode()
+            result = 31 * result + email.hashCode()
+            return result
+        }
+
+        override fun toString(): String {
+            return "$name <$email>"
+        }
     }
 
     enum class GitEnv(val value: String) {
