@@ -6,7 +6,7 @@ import java.io.File
 
 class JsonUtil(private val mapper: ObjectMapper) {
 
-    fun <T> readListFromFile(file: File, valueType: Class<T>): MutableList<T> {
+    private fun <T> readListFromFile(file: File, valueType: Class<T>): MutableList<T> {
         return if (file.length() == 0L) {
             mutableListOf()
         } else {
@@ -14,7 +14,7 @@ class JsonUtil(private val mapper: ObjectMapper) {
         }
     }
 
-    fun <K, V> readMapFromFile(file: File, keyType: Class<K>, valueType: Class<V>): MutableMap<K, V> {
+    private fun <K, V> readMapFromFile(file: File, keyType: Class<K>, valueType: Class<V>): MutableMap<K, V> {
         return if (file.length() == 0L) {
             mutableMapOf()
         } else {

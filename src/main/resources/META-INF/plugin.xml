@@ -2,21 +2,17 @@
 <idea-plugin>
     <id>com.meow.demo</id>
     <name>Git User Management</name>
-    <vendor>meow</vendor>
+<!--    <vendor>meow</vendor>-->
+    <vendor email="y15826227155@yahoo.com">meow</vendor>
 
     <depends>com.intellij.modules.platform</depends>
-
-    <description><![CDATA[
-        switch global or local git user<br>
-        <em>nah</em>
-    ]]>
-    </description>
 
     <resource-bundle>messages.MyBundle</resource-bundle>
 
     <extensions defaultExtensionNs="com.intellij">
         <toolWindow factoryClass="com.meow.manageGitUser.toolWindow.GitUserToolWindowFactory"
-                    id="MyToolWindow"/>
+                    id="Manage git user"
+                    icon="com.intellij.icons.ExpUiIcons.CodeWithMe.CwmUsers"/>
     </extensions>
 
     <applicationListeners>

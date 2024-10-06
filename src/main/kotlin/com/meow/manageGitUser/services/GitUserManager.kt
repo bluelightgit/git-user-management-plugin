@@ -35,7 +35,7 @@ class GitUserManager(private val mapper: ObjectMapper, parentPath: String) {
 
         try {
             loadGitUsers()
-            loadLocalGitUsers()
+//            loadLocalGitUsers()
             if (users.isEmpty() || (curGlobalGitUser != null && users.none { it == curGlobalGitUser })) {
                 saveGitUsers(curGlobalGitUser!!)
             }
@@ -71,6 +71,20 @@ class GitUserManager(private val mapper: ObjectMapper, parentPath: String) {
             users.add(user)
             jsonUtil.writeListToFile(usersFile, users)
             return user
+        } catch (e: Exception) {
+            throw RuntimeException(e)
+        }
+    }
+
+    fun editGitUser(oldUser: GitUser, newUser: GitUser): GitUser {
+        try {
+            val index = users.indexOf(oldUser)
+            if (index == -1) {
+                throw RuntimeException("User not found")
+            }
+            users[index] = newUser
+            jsonUtil.writeListToFile(usersFile, users)
+            return newUser
         } catch (e: Exception) {
             throw RuntimeException(e)
         }

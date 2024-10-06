@@ -8,6 +8,7 @@ import com.intellij.openapi.project.Project
 import com.meow.manageGitUser.MyBundle
 
 import com.meow.manageGitUser.services.GitUserManager.*
+import java.util.*
 
 @Service(Service.Level.PROJECT)
 class GitUserService(project: Project) {
@@ -17,9 +18,16 @@ class GitUserService(project: Project) {
 
     init {
         thisLogger().info("GitUserService initialized for project: ${project.name}")
-        val filePath = MyBundle.message("GitUserProfileParentPath")
+        val filePath = getGitUserProfileParentPath()
         val objectMapper = ObjectMapper().registerModule(KotlinModule.Builder().build())
         gitUserManager = GitUserManager(objectMapper, filePath)
+    }
+
+    private fun getGitUserProfileParentPath(): String {
+        val properties = Properties()
+        properties.load(this::class.java.getResourceAsStream("/messages/MyBundle.properties"))
+        val pathTemplate = properties.getProperty("GitUserProfileParentPath")
+        return pathTemplate.replace("\${user.home}", System.getProperty("user.home"))
     }
 
     fun getGitUsers(): List<GitUser> {
@@ -30,8 +38,7 @@ class GitUserService(project: Project) {
         return gitUserManager.getCurGlobalGitUser()!!
     }
 
-    fun setGitUser(name: String, email: String, env: GitEnv) {
-        val gitUser = GitUser(name, email)
+    fun setGitUser(gitUser: GitUser, env: GitEnv) {
         if (env == GitEnv.GLOBAL) {
             gitUserManager.applyGlobalGitUser(gitUser)
         } else {
@@ -39,8 +46,7 @@ class GitUserService(project: Project) {
         }
     }
 
-    fun addGitUser(name: String, email: String, env: GitEnv, path: String?) {
-        val gitUser = GitUser(name, email)
+    fun addGitUser(gitUser: GitUser, env: GitEnv, path: String?) {
         gitUserManager.saveGitUsers(gitUser)
         if (env == GitEnv.LOCAL && path != null) {
             gitUserManager.saveLocalGitUsers(gitUser, path)
@@ -49,5 +55,9 @@ class GitUserService(project: Project) {
 
     fun deleteGitUser(gitUser: GitUser, env: GitEnv) {
         gitUserManager.deleteGitUser(gitUser)
+    }
+
+    fun editGitUser(oldUser: GitUser, newUser: GitUser) {
+        gitUserManager.editGitUser(oldUser, newUser)
     }
 }
