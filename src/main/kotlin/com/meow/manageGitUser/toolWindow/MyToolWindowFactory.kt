@@ -124,7 +124,7 @@ class GitUserToolWindowFactory : ToolWindowFactory {
                             gitUserService.editGitUser(selectedUser, curGitUser)
                         }
                     }
-                    if (env == GitUserManager.GitEnv.GLOBAL) {
+                    if (globalRadio.isSelected) {
                         gitUserService.setGitUser(curGitUser, env)
                     }
                     refreshContent()

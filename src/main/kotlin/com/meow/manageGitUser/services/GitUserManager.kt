@@ -29,9 +29,9 @@ class GitUserManager(private val mapper: ObjectMapper, parentPath: String) {
         if (!usersFile.exists()) {
             usersFile.createNewFile()
         }
-        if (!localGitUsersFile.exists()) {
-            localGitUsersFile.createNewFile()
-        }
+//        if (!localGitUsersFile.exists()) {
+//            localGitUsersFile.createNewFile()
+//        }
 
         try {
             loadGitUsers()
